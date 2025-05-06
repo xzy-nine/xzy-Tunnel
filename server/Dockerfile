@@ -5,7 +5,7 @@ WORKDIR /app
 
 # 安装应用依赖
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # 复制应用代码
 COPY src/ ./src/
