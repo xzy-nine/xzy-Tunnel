@@ -3,7 +3,7 @@ import { addXzyTunnelHeader, getPortFromUrl, buildUrlWithPort } from './utils/he
 // 目标域名和端口配置
 const CONFIG = {
   targetDomain: "example.com",
-  redirectP,rt: 1234, // 要重定向到的标准端口
+  redirectPort: 1234, // 要重定向到的标准端口
   debugMode: false
 };
 
