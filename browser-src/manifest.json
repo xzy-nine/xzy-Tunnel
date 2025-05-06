@@ -6,14 +6,14 @@
   "permissions": [
     "webRequest",
     "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
     "browsingData",
     "storage",
     "tabs",
     "webNavigation"
   ],
   "host_permissions": [
-    "*://example.com/*",
-    "*://*.example.com/*"
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js",

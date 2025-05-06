@@ -1,15 +1,17 @@
 // 导入工具函数
 import { addXzyTunnelHeader, getPortFromUrl, buildUrlWithPort } from './utils/headers.js';
-
 // 目标域名和端口配置
 const CONFIG = {
   targetDomain: "example.com",
-  redirectPort: 1234, // 要重定向到的标准端口
+  redirectP,rt: 1234, // 要重定向到的标准端口
   debugMode: false
 };
 
 // 存储检测到的连接
 let detectedConnections = [];
+
+// 全局记录当前活动规则ID
+let activeRuleId = 1;
 
 // 调试日志函数
 function logDebug(message) {
@@ -18,18 +20,54 @@ function logDebug(message) {
   }
 }
 
+// 更新请求头规则函数
+function updateHeaderRule(originalPort) {
+  // 创建规则对象
+  const headerRule = {
+    id: activeRuleId,
+    priority: 1,
+    action: {
+      type: 'modifyHeaders',
+      requestHeaders: [{
+        header: 'xzytunnel',
+        operation: 'set',
+        value: originalPort  // 这里直接使用变量值，不使用模板字符串
+      }]
+    },
+    condition: {
+      domains: [CONFIG.targetDomain, `*.${CONFIG.targetDomain}`],
+      urlFilter: '*'
+    }
+  };
+
+  // 更新会话规则
+  chrome.declarativeNetRequest.updateSessionRules({
+    removeRuleIds: [activeRuleId],
+    addRules: [headerRule]
+  }, () => {
+    if (chrome.runtime.lastError) {
+      console.error("[XZY-Tunnel] 更新规则失败:", chrome.runtime.lastError);
+    } else {
+      logDebug(`已应用xzytunnel请求头规则，端口: ${originalPort}`);
+      // 为下次更新准备新的规则ID
+      activeRuleId = activeRuleId === 999 ? 1 : activeRuleId + 1;
+    }
+  });
+}
+
 // 替换原有的请求拦截器
 chrome.webNavigation.onBeforeNavigate.addListener(
   (details) => {
     try {
-      const url = new URL(details.url);
-      
-      // 检查是否是目标域名
-      if (url.hostname === CONFIG.targetDomain || url.hostname.endsWith(`.${CONFIG.targetDomain}`)) {
-        logDebug(`检测到目标域名访问: ${details.url}`);
+      // 确保它是主框架（顶级导航）
+      if (details.frameId === 0) {
+        logDebug(`检测到导航: ${details.url}`);
         
-        // 记录连接
-        recordConnection(url.hostname);
+        // 检查和记录主机名
+        const hostname = new URL(details.url).hostname;
+        if (hostname.includes(CONFIG.targetDomain)) {
+          recordConnection(hostname);
+        }
         
         // 检查端口并处理
         const originalPort = getPortFromUrl(details.url);
@@ -44,6 +82,9 @@ chrome.webNavigation.onBeforeNavigate.addListener(
           // 重定向标签页
           chrome.tabs.update(details.tabId, { url: newUrl });
           logDebug(`已重定向到: ${newUrl}`);
+
+          // 更新请求头规则以包含原始端口
+          updateHeaderRule(originalPort);
         }
       }
     } catch (e) {
@@ -54,27 +95,6 @@ chrome.webNavigation.onBeforeNavigate.addListener(
     { hostSuffix: CONFIG.targetDomain }
   ]}
 );
-
-// 使用请求头修改器（需要在manifest中添加declarativeNetRequest权限）
-chrome.declarativeNetRequest.updateDynamicRules({
-  removeRuleIds: [1],
-  addRules: [{
-    id: 1,
-    priority: 1,
-    action: {
-      type: 'modifyHeaders',
-      requestHeaders: [{
-        header: 'xzytunnel',
-        operation: 'set',
-        value: '${originalPort}'  // 这里需要动态替换，实际使用中需要进一步处理
-      }]
-    },
-    condition: {
-      domains: [CONFIG.targetDomain, `*.${CONFIG.targetDomain}`],
-      urlFilter: '*'
-    }
-  }]
-});
 
 // 记录检测到的连接
 function recordConnection(hostname) {
@@ -138,6 +158,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // 初始化
 chrome.runtime.onInstalled.addListener(() => {
+  // 移除可能存在的旧会话规则
+  chrome.declarativeNetRequest.getSessionRules(existingRules => {
+    if (existingRules && existingRules.length > 0) {
+      const ruleIdsToRemove = existingRules.map(rule => rule.id);
+      chrome.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: ruleIdsToRemove,
+        addRules: []
+      });
+    }
+  });
+
+  // 其他初始化逻辑...
   chrome.storage.local.get(["connections", "debugMode"], (result) => {
     if (result.connections) {
       detectedConnections = result.connections;

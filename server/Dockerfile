@@ -17,7 +17,7 @@ RUN mkdir -p /app/logs
 ENV NODE_ENV=production
 ENV PORT=1234
 
-# 暴露固定的容器内端口
+# 暴露固定的容器内端口,,
 EXPOSE 1234
 
 # 启动命令
