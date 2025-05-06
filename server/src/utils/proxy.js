@@ -55,6 +55,11 @@ function createProxyMiddleware(targetPort) {
     }
   });
 
+  // 新增：记录代理响应
+  proxy.on('proxyRes', (proxyRes, req, res) => {
+    logger.info(`转发完成: ${req.method} ${req.url} -> localhost:${targetPort}，状态码: ${proxyRes.statusCode}`);
+  });
+
   // 返回代理中间件
   return (req, res, next) => {
     return proxy.web(req, res, {}, (err) => {

@@ -35,11 +35,27 @@ app.use('/', proxyRoutes);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {
-  logger.error(`服务器错误: ${err.message}`);
-  res.status(500).json({ 
-    error: config.NODE_ENV === 'production' ? '服务器错误' : err.message,
-    requestId: req.id // 如果你添加了请求ID中间件
-  });
+  const statusCode = err.status || 500;
+  logger.error(`服务器错误: ${err.message}`, err);
+
+  // HTML 响应
+  if (req.accepts('html')) {
+    const renderHelpPage = require('./routes/proxy').renderHelpPage;
+    // 传递错误信息
+    return res
+      .status(statusCode)
+      .send(renderHelpPage(req, { message: err.message, stack: err.stack }));
+  }
+
+  // JSON 响应
+  const errorPayload = {
+    error: err.message || 'Unknown error',
+    requestId: req.id
+  };
+  if (config.NODE_ENV !== 'production') {
+    errorPayload.stack = err.stack;
+  }
+  res.status(statusCode).json(errorPayload);
 });
 
 // 启动服务器 - 固定端口
