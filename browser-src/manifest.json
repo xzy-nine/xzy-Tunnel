@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "XZY-Tunnel",
+  "version": "1.0.0",
+  "description": "访问特定域名的专用通道",
+  "permissions": [
+    "webRequest",
+    "declarativeNetRequest",
+    "browsingData",
+    "storage",
+    "tabs",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "*://example.com/*",
+    "*://*.example.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/favicon.png",
+      "48": "icons/favicon.png",
+      "128": "icons/favicon.png"
+    }
+  },
+  "icons": {
+    "16": "icons/favicon.png",
+    "48": "icons/favicon.png",
+    "128": "icons/favicon.png"
+  }
+}

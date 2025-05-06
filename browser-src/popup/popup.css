@@ -1,0 +1,137 @@
+:root {
+  --primary-color: #3498db;
+  --secondary-color: #2980b9;
+  --text-color: #333;
+  --background-color: #f9f9f9;
+  --border-color: #ddd;
+  --success-color: #2ecc71;
+  --error-color: #e74c3c;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  width: 320px;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+.container {
+  padding: 15px;
+}
+
+h1 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: var(--primary-color);
+  text-align: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+h2 {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.section {
+  margin-bottom: 15px;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.connection-list {
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-top: 5px;
+}
+
+.connection-item {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.connection-item:last-child {
+  border-bottom: none;
+}
+
+.connection-name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-message {
+  padding: 10px;
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  font-size: 12px;
+}
+
+.form-group {
+  display: flex;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+label {
+  flex: 0 0 70px;
+  font-size: 12px;
+}
+
+input[type="text"] {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 5px;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: var(--secondary-color);
+}
+
+.footer {
+  margin-top: 10px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.status {
+  height: 20px;
+  font-style: italic;
+}
+
+.status.success {
+  color: var(--success-color);
+}
+
+.status.error {
+  color: var(--error-color);
+}

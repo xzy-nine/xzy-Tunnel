@@ -1,0 +1,45 @@
+<!-- filepath: browser-extension/popup/popup.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XZY-Tunnel</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>XZY-Tunnel</h1>
+    
+    <div class="section">
+      <h2>已检测到的连接</h2>
+      <div class="connection-list" id="connectionList">
+        <div class="empty-message">暂未检测到连接</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>缓存管理</h2>
+      <div class="form-group">
+        <label for="cacheDomain">域名:</label>
+        <input type="text" id="cacheDomain" placeholder="example.com">
+        <button id="clearCacheBtn">清除缓存</button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>设置</h2>
+      <div class="form-group">
+        <label for="debugMode">调试模式:</label>
+        <input type="checkbox" id="debugMode">
+      </div>
+    </div>
+    
+    <div class="footer">
+      <div class="status" id="statusMessage"></div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
