@@ -2,7 +2,7 @@
 import { addXzyTunnelHeader, getPortFromUrl, buildUrlWithPort } from './utils/headers.js';
 // 目标域名和端口配置
 const CONFIG = {
-  targetDomain: "xzyht.fun", // 目标域名
+  targetDomain: "", // 目标域名从存储中读取
   redirectPort: 9868, // 要重定向到的标准端口
   debugMode: false
 };
@@ -22,6 +22,12 @@ function logDebug(message) {
 
 // 更新请求头规则函数
 function updateHeaderRule(originalPort) {
+  // 如果没有设置目标域名，则不添加规则
+  if (!CONFIG.targetDomain) {
+    logDebug("未设置目标域名，跳过添加请求头规则");
+    return;
+  }
+
   // 创建规则对象
   const headerRule = {
     id: activeRuleId,
@@ -31,7 +37,7 @@ function updateHeaderRule(originalPort) {
       requestHeaders: [{
         header: 'xzytunnel',
         operation: 'set',
-        value: originalPort  // 这里直接使用变量值，不使用模板字符串
+        value: originalPort
       }]
     },
     condition: {
@@ -55,9 +61,20 @@ function updateHeaderRule(originalPort) {
   });
 }
 
-// 替换原有的请求拦截器
-chrome.webNavigation.onBeforeNavigate.addListener(
-  (details) => {
+// 当前活跃的导航监听器
+let activeListener = null;
+
+// 根据目标域名设置导航监听器
+function setupNavigationListener(domain) {
+  // 如果存在旧监听器，先移除
+  if (activeListener) {
+    chrome.webNavigation.onBeforeNavigate.removeListener(activeListener);
+  }
+  
+  if (!domain) return; // 如果没有域名，不设置监听器
+  
+  // 创建新的监听回调
+  activeListener = (details) => {
     try {
       // 确保它是主框架（顶级导航）
       if (details.frameId === 0) {
@@ -90,11 +107,16 @@ chrome.webNavigation.onBeforeNavigate.addListener(
     } catch (e) {
       console.error("URL解析错误:", e);
     }
-  },
-  { url: [
-    { hostSuffix: CONFIG.targetDomain }
-  ]}
-);
+  };
+  
+  // 添加新的监听器
+  chrome.webNavigation.onBeforeNavigate.addListener(
+    activeListener,
+    { url: [{ hostSuffix: domain }] }
+  );
+  
+  logDebug(`已设置导航监听器，目标域名: ${domain}`);
+}
 
 // 记录检测到的连接
 function recordConnection(hostname) {
@@ -116,43 +138,77 @@ function recordConnection(hostname) {
 function clearDomainCache(domain) {
   return new Promise((resolve, reject) => {
     try {
-      chrome.browsingData.remove({
-        "origins": [`https://${domain}`]
-      }, {
-        "cache": true,
-        "cookies": true,
-        "localStorage": true,
-        "sessionStorage": true
-      }, () => {
-        logDebug(`已清除域名缓存: ${domain}`);
-        resolve();
-      });
+      chrome.browsingData.remove(
+        { origins: [`https://${domain}`] },
+        {
+          cache: true,
+          cookies: true,
+          localStorage: true
+        },
+        () => {
+          logDebug(`已清除域名缓存: ${domain}`);
+          resolve();
+        }
+      );
     } catch (error) {
       reject(error);
     }
   });
 }
 
-// 监听来自弹出窗口的消息
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  switch(request.action) {
+// Promise 化 proxy 设置
+const setProxy = enabled =>
+  new Promise(res => {
+    const mode = enabled ? 'system' : 'direct';
+    chrome.proxy.settings.set({ value: { mode }, scope: 'regular' }, () => res({ success: true }));
+  });
+
+chrome.runtime.onMessage.addListener((req, sender, send) => {
+  switch(req.action) {
     case "getConnections":
-      sendResponse({ connections: detectedConnections });
+      send({ connections: detectedConnections });
       break;
-    
+
     case "clearCache":
-      if (request.domain) {
-        clearDomainCache(request.domain)
-          .then(() => sendResponse({ success: true }))
-          .catch((err) => sendResponse({ success: false, error: err.toString() }));
-        return true; // 异步响应
-      }
-      break;
-    
+      clearDomainCache(req.domain)
+        .then(() => send({ success: true }))
+        .catch(e => send({ success: false, error: e.toString() }));
+      return true;
+
     case "setDebugMode":
-      CONFIG.debugMode = request.enabled;
-      sendResponse({ success: true });
+      CONFIG.debugMode = req.enabled;
+      send({ success: true });
       break;
+
+    case "setTargetDomain":
+      CONFIG.targetDomain = req.domain;
+      // 使用新域名更新导航监听器
+      setupNavigationListener(req.domain);
+      send({ success: true });
+      break;
+
+    case "setProxyState":
+      setProxy(req.enabled).then(send);
+      return true;
+
+    case "bypassDomain":
+      chrome.proxy.settings.get({ incognito: false }, config => {
+        const value = config.value || {};
+        const rules = value.rules || {};
+        const bypassList = rules.bypassList || [];
+        if (!bypassList.includes(req.domain)) {
+          bypassList.push(req.domain);
+        }
+        const newValue = {
+          ...value,
+          rules: { ...rules, bypassList }
+        };
+        chrome.proxy.settings.set(
+          { value: newValue, scope: 'regular' },
+          () => send({ success: true })
+        );
+      });
+      return true;
   }
 });
 
@@ -170,13 +226,19 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 
   // 其他初始化逻辑...
-  chrome.storage.local.get(["connections", "debugMode"], (result) => {
+  chrome.storage.local.get(["connections", "debugMode", "targetDomain"], (result) => {
     if (result.connections) {
       detectedConnections = result.connections;
     }
     
     if (result.debugMode !== undefined) {
       CONFIG.debugMode = result.debugMode;
+    }
+
+    if (result.targetDomain) {
+      CONFIG.targetDomain = result.targetDomain;
+      // 使用保存的域名设置导航监听器
+      setupNavigationListener(result.targetDomain);
     }
     
     logDebug("XZY-Tunnel扩展已初始化");

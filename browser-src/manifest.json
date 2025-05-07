@@ -10,6 +10,7 @@
     "browsingData",
     "storage",
     "tabs",
+    "proxy",
     "webNavigation"
   ],
   "host_permissions": [

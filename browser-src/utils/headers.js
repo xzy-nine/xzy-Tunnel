@@ -2,41 +2,27 @@
  * XZY-Tunnel 请求头处理工具
  */
 
-// 添加XZY-Tunnel请求头
-function addXzyTunnelHeader(headers, originalPort) {
-  headers.push({
-    name: "xzytunnel",
-    value: originalPort
-  });
-  return headers;
+// 安全解析 URL
+const safeUrl = url => {
+  try { return new URL(url) }
+  catch { return null }
 }
 
-// 从URL中解析端口信息
-function getPortFromUrl(url) {
-  try {
-    const urlObj = new URL(url);
-    return urlObj.port || (urlObj.protocol === 'https:' ? '443' : '80');
-  } catch (e) {
-    console.error("解析URL端口失败:", e);
-    return null;
-  }
+// 添加 xzytunnel header（返回新数组，避免修改原 headers）
+export const addXzyTunnelHeader = (headers, originalPort) =>
+  [...headers, { name: 'xzytunnel', value: originalPort }]
+
+// 从 URL 中提取端口
+export const getPortFromUrl = url => {
+  const u = safeUrl(url)
+  if (!u) return null
+  return u.port || (u.protocol === 'https:' ? '443' : '80')
 }
 
-// 构建带有特定端口的URL
-function buildUrlWithPort(url, port) {
-  try {
-    const urlObj = new URL(url);
-    urlObj.port = port;
-    return urlObj.toString();
-  } catch (e) {
-    console.error("构建URL失败:", e);
-    return url;
-  }
+// 构造带指定端口的新 URL
+export const buildUrlWithPort = (url, port) => {
+  const u = safeUrl(url)
+  if (!u) return url
+  u.port = port
+  return u.toString()
 }
-
-// 导出工具函数
-export {
-  addXzyTunnelHeader,
-  getPortFromUrl,
-  buildUrlWithPort
-};
